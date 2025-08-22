@@ -142,13 +142,17 @@ def export_pybpod_files_core(bpod_session_dict,
     scanimage_metadata_dict_list = list()
     for basename in uniquebasenames:
         #%
+        if basename.endswith('_slm'):
+            print('{} skipped'.format(basename))
+            continue
         file_idxs_now = (files['exts']=='.tif') & (files['basenames']==basename)
         filenames = files['filenames'][file_idxs_now]
         fileindices = files['fileindices'][file_idxs_now]
         order = np.argsort(fileindices)
         filenames = filenames[order]
-        
+        tiff_header_saved = False
         for filename in filenames:
+            
             try:
                 metadata = io.io_scanimage.extract_scanimage_metadata(os.path.join(calcium_imaging_raw_session_dir,filename))
                 
@@ -183,8 +187,14 @@ def export_pybpod_files_core(bpod_session_dict,
             frame_timestamps_all.append(frame_timestamp)
             nextfile_timestamps_all.append(nextfile_timestamp)
             acqtrigger_timestamps_all.append(acqtrigger_timestamp)
-            scanimage_metadata_dict_list.append(metadata)
-            
+            if not tiff_header_saved:
+                scanimage_metadata_dict_list.append(metadata)
+                tiff_header_saved_file = filename
+                tiff_header_saved = True
+            else:
+                metadata_ = {'description_first_frame':metadata['description_first_frame'],
+                             'full_header_link':tiff_header_saved_file}
+                scanimage_metadata_dict_list.append(metadata_)
             #trignextstopenable = 'true' in metadata['metadata']['hScan2D']['trigNextStopEnable'].lower()
             if metadata['metadata']['extTrigEnable'] == '0':
                 trigger_arrived_timestamps_all.append(np.nan)
